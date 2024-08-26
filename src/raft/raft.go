@@ -58,10 +58,10 @@ type Raft struct {
 	serverState       RoleType                // 当前节点状态
 	currentTerm       int                     // 节点当前任期
 	votedFor          int                     // follower把票投给了哪个candidate
-    voteCount         int                     // 记录所获选票的个数
-    appendEntriesChan chan AppendEntriesReply // 心跳channel
+	voteCount         int                     // 记录所获选票的个数
+	appendEntriesChan chan AppendEntriesReply // 心跳channel
     // LeaderMsgChan     chan struct{}        // 当选Leader时发送
-    VoteMsgChan       chan struct{}           // 收到选举信号时重置一下计时器，不然会出现覆盖term后计时器超时又突然自增。
+	VoteMsgChan       chan struct{}           // 收到选举信号时重置一下计时器，不然会出现覆盖term后计时器超时又突然自增。
 
 	// 2B
 	commitIndex       int            // 记录已知被提交的最高日志条目索引（初始化为0，单调递增）
@@ -151,7 +151,7 @@ func (rf *Raft) Snapshot(index int, snapshot []byte) {
 func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	// 锁定当前Raft实例，以保证并发安全。
 	rf.mu.Lock()
-    defer rf.mu.Unlock()
+	defer rf.mu.Unlock()
 
 	// 设置返回的任期，
 	reply.Term = rf.currentTerm
@@ -271,7 +271,7 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 */
 func (rf *Raft) sendAllRaftRequestVote() {
 	rf.mu.Lock()
-    defer rf.mu.Unlock()
+	defer rf.mu.Unlock()
 
 	lastLog := rf.logs[len(rf.logs)-1]
 
@@ -308,7 +308,7 @@ func (rf *Raft) sendAllRaftRequestVote() {
 func (rf * Raft) AppendEntriesHandler(args *AppendEntriesArgs, reply *AppendEntriesReply) {
 
 	rf.mu.Lock()
-    defer rf.mu.Unlock()
+	defer rf.mu.Unlock()
 
 	// 初始化响应的任期为当前任期
 	reply.Term = rf.currentTerm
