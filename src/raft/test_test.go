@@ -119,6 +119,7 @@ func TestManyElections2A(t *testing.T) {
 	cfg.end()
 }
 
+/*正常的日志同步。*/
 func TestBasicAgree2B(t *testing.T) {
 	servers := 3
 	cfg := make_config(t, servers, false, false)
@@ -177,6 +178,9 @@ func TestRPCBytes2B(t *testing.T) {
 	cfg.end()
 }
 
+/*TestFailAgree2B
+共三个节点。在同步了一个日志后，一个节点丢失（网络分区），在大多数节点（即剩余两个，其中为一个leader和一个follow）
+同步了五六个日志后才回到集群。这时候：1.重新选举，2.快速同步日志。*/
 func TestFailAgree2B(t *testing.T) {
 	servers := 3
 	cfg := make_config(t, servers, false, false)
@@ -211,6 +215,7 @@ func TestFailAgree2B(t *testing.T) {
 	cfg.end()
 }
 
+/*在同步了一个日志后，有三个节点失联，测试，然后三个节点恢复，再测试。*/
 func TestFailNoAgree2B(t *testing.T) {
 	servers := 5
 	cfg := make_config(t, servers, false, false)
@@ -262,6 +267,7 @@ func TestFailNoAgree2B(t *testing.T) {
 	cfg.end()
 }
 
+/*在多个命令并发请求时，leader 要保证每次只能完整处理一条命令，不能因为并发导致有命令漏处理。*/
 func TestConcurrentStarts2B(t *testing.T) {
 	servers := 3
 	cfg := make_config(t, servers, false, false)
