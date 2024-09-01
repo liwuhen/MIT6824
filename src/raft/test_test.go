@@ -369,6 +369,7 @@ loop:
 	cfg.end()
 }
 
+/* 目的是为了验证，当一个leader失效后（网络断开），又接受了多个命令，如何在重新加入后完成日志同步的问题。*/
 func TestRejoin2B(t *testing.T) {
 	servers := 3
 	cfg := make_config(t, servers, false, false)
@@ -407,6 +408,10 @@ func TestRejoin2B(t *testing.T) {
 	cfg.end()
 }
 
+/*大概就是，5台机器，决出leadaer1后，leader1和一个节点分区，然后发送多条不能commit的指令给leader1。
+剩下的节点中决出新leader2，发送多条可以commit的指令，然后再关闭其中一台机器，现在leader2仅和一个follower联通，
+此时给leader2再发送多条不能commit的指令。然后让leader1和其他两个失联的节点恢复，继续疯狂发送多条可以commit的指令。
+最后要求所有机器的apply顺序相同。*/
 func TestBackup2B(t *testing.T) {
 	servers := 5
 	cfg := make_config(t, servers, false, false)
@@ -479,6 +484,7 @@ func TestBackup2B(t *testing.T) {
 	cfg.end()
 }
 
+/*完成日志复制过程中，所需要用到的RPC个数，不能太多，比如这里是不能超过60个rpc调用。*/
 func TestCount2B(t *testing.T) {
 	servers := 3
 	cfg := make_config(t, servers, false, false)

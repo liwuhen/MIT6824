@@ -22,7 +22,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	"fmt"
+	// "fmt"
 	"math/rand"
 //	"6.824/labgob"
 	"6.824/labrpc"
@@ -176,8 +176,8 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 		} 
 	}
 
-	DPrintf("Server %d gets an RequestVote RPC with a higher term from Candidate %d, and its current term become %d.\n", 
-		rf.me, args.CandidateId, rf.currentTerm)
+	// DPrintf("Server %d gets an RequestVote RPC with a higher term from Candidate %d, and its current term become %d.\n", 
+	// 	rf.me, args.CandidateId, rf.currentTerm)
 
 	// 选举投票限制条件：
 	// 1-候选人最后一条Log条目的任期号大于本地最后一条Log条目的任期号；
@@ -186,7 +186,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 	if args.LastLogTerm < lastLog.Term || 
 		(args.LastLogTerm == lastLog.Term && args.LastLogIndex < lastLog.Index) {
 
-		DPrintf("Candidate %d fail", args.CandidateId)
+		// DPrintf("Candidate %d fail", args.CandidateId)
 		return
 	}
 
@@ -232,7 +232,7 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 	// server下标节点调用RequestVote RPC处理程序
 	ok := rf.peers[server].Call("Raft.RequestVote", args, reply); 
 	if !ok {
-		DPrintf("=>[DEBUG]: server %d call failed serverState %d \n", rf.me, rf.serverState)
+		// DPrintf("=>[DEBUG]: server %d call failed serverState %d \n", rf.me, rf.serverState)
 		return false
 	}
 
@@ -259,7 +259,7 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 	if reply.VoteGranted && rf.serverState == Candidate {
 		rf.voteCount++;
 
-		DPrintf("Candidate %d got a vote from server %d, current voteCount %d!\n", rf.me, server, rf.voteCount)
+		// DPrintf("Candidate %d got a vote from server %d, current voteCount %d!\n", rf.me, server, rf.voteCount)
 
 		// 如果当前节点的投票数超过一半，且节点仍为候选者，转为Leader
 		if 2*rf.voteCount > len(rf.peers) && rf.serverState == Candidate {
@@ -267,7 +267,7 @@ func (rf *Raft) sendRequestVote(server int, args *RequestVoteArgs, reply *Reques
 			// 超半数票 直接当选，当选为领导者后，通知 LeaderMsgChan
 			rf.LeaderMsgChan <- struct{}{}
 		} else { // 收到所有回复但选票仍不够的情况，即竞选失败
-			DPrintf("Candidate %d failed in the election and continued to wait...\n", rf.me)
+			// DPrintf("Candidate %d failed in the election and continued to wait...\n", rf.me)
 		}
 	}
 
@@ -294,7 +294,7 @@ func (rf *Raft) sendAllRaftRequestVote() {
 	for index := range rf.peers {
 
 		if rf.killed() {
-			DPrintf("Candidate %d is dead !\n", rf.me)
+			// DPrintf("Candidate %d is dead !\n", rf.me)
 			return 
 		}
 
@@ -309,7 +309,7 @@ func (rf *Raft) sendAllRaftRequestVote() {
 				}
 				ok := rf.sendRequestVote(id, args, ret)
 				if !ok {
-					DPrintf("Candidate %d call server %d for RequestVote failed!\n", rf.me, id)
+					// DPrintf("Candidate %d call server %d for RequestVote failed!\n", rf.me, id)
 				}
 			}(index)
 		}
@@ -322,8 +322,8 @@ func (rf * Raft) AppendEntriesHandler(args *AppendEntriesArgs, reply *AppendEntr
 	rf.mu.Lock()
 	defer rf.mu.Unlock()
 
-	DPrintf("Server %d gets an AppendEntries RPC(term:%d, Entries len:%d) with a higher term from Leader %d, and its current term become %d.\n",
-		rf.me, args.Term, len(args.Entries), args.LeaderId, rf.currentTerm)
+	// DPrintf("Server %d gets an AppendEntries RPC(term:%d, Entries len:%d) with a higher term from Leader %d, and its current term become %d.\n",
+	// 	rf.me, args.Term, len(args.Entries), args.LeaderId, rf.currentTerm)
 
 	// 初始化响应的任期为当前任期
 	reply.Term = rf.currentTerm
@@ -338,6 +338,10 @@ func (rf * Raft) AppendEntriesHandler(args *AppendEntriesArgs, reply *AppendEntr
 	// 或者当前节点是candidate，且任期等于leader任期（表明节点中存在多个Candidate），转为候选者。
 	if rf.currentTerm < args.Term || (rf.currentTerm == args.Term && rf.serverState == Candidate){
 		rf.ConverToFollower(args.Term)
+
+		// if rf.serverState == Leader {
+		// 	DPrintf("Leader %d (term:%d) tranfer to follower (New Leader %d term:%d).\n",rf.me, rf.currentTerm, args.LeaderId, args.Term)
+		// }
 	}
 
 	// 发送心跳或日志条目后
@@ -406,7 +410,7 @@ func (rf * Raft) AppendEntriesHandler(args *AppendEntriesArgs, reply *AppendEntr
 		rf.commitIndex = min(args.LeaderCommit, rf.logs[len(rf.logs)-1].Index)
 	}
 
-	fmt.Printf("server %d follower logs len : %d \n", rf.me, len(rf.logs))
+	// fmt.Printf("server %d follower logs len : %d \n", rf.me, len(rf.logs))
 
 }
 
@@ -429,7 +433,8 @@ func (rf * Raft) sendAppendEntries(id int, args *AppendEntriesArgs, reply *Appen
 
     // 如果响应中的任期大于当前任期，当前节点会转换为跟随者
     if reply.Term > rf.currentTerm {
-       rf.ConverToFollower(reply.Term)
+		// DPrintf("Leader %d (term:%d) tranfer to follower (reply term:%d).\n",rf.me, rf.currentTerm, reply.Term)
+		rf.ConverToFollower(reply.Term)
     }
 
 	// 2B-新增日志复制功能
@@ -490,7 +495,7 @@ func (rf * Raft) sendAppendEntries(id int, args *AppendEntriesArgs, reply *Appen
 		// }
 	}
 
-	fmt.Printf("leader copy to follower : %d \n",rf.matchIndex)
+	// fmt.Printf("leader copy to follower : %d \n",rf.matchIndex)
 
 	return true
 }
@@ -536,13 +541,13 @@ func (rf *Raft) sendAllRaftAppendEntries() {
 					Term: 0,
 					Success: false,
 				}
-				DPrintf("Leader %d sends AppendEntries RPC(term:%d, Entries len:%d, logs len:%d, nextId:%d | preIndex:%d, PreTerm:%d) to server %d...\n", 
-					rf.me, rf.currentTerm, len(args.Entries), len(rf.logs), nextId, args.PrevLogIndex, args.PrevLogTerm, id)
+				// DPrintf("Leader %d sends AppendEntries RPC(term:%d, Entries len:%d, logs len:%d, nextId:%d | preIndex:%d, PreTerm:%d) to server %d...\n", 
+				// 	rf.me, rf.currentTerm, len(args.Entries), len(rf.logs), nextId, args.PrevLogIndex, args.PrevLogTerm, id)
 				ok := rf.sendAppendEntries(id, args, reply)
 				if !ok {
 					// 如果由于网络原因或者follower故障等收不到RPC回复（不是follower将回复设为false）
 					// 则leader无限期重复发送同样的RPC（nextIndex不前移），等到下次心跳时间到了后再发送
-					DPrintf("Leader %d calls server %d for AppendEntries or Heartbeat failed!\n", rf.me, id)
+					// DPrintf("Leader %d calls server %d for AppendEntries or Heartbeat failed!\n", rf.me, id)
 					return
 				}
 			}(server)
@@ -575,7 +580,7 @@ func (rf *Raft) checkCommitIndex() {
 			if rf.serverState == Leader {
 				// 在leader的日志索引idx下，leader的日志成功附加到集群中的N/2+1的节点上，更新leader的commitIndex
 				rf.commitIndex = idx
-				DPrintf("Leader%d's commitIndex is updated to %d.\n", rf.me, idx)
+				// DPrintf("Leader%d's commitIndex is updated to %d.\n", rf.me, idx)
 			}
 			break
 		}
@@ -635,7 +640,7 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 
 	// Your code here (2B).
 	if rf.serverState != Leader {
-		DPrintf("Client sends a new commad to Server %d but lt's not Leader!\n", rf.me)
+		// DPrintf("Client sends a new commad to Server %d but lt's not Leader!\n", rf.me)
 		return -1, -1, false 
 	}
 
@@ -650,7 +655,7 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 	index = addLog.Index
 	term  = addLog.Term
 
-	DPrintf("[Start]Client sends a new commad to Leader %d!\n", rf.me)
+	// DPrintf("[Start]Client sends a new commad to Leader %d!\n", rf.me)
 
 	return index, term, isLeader
 }
@@ -760,13 +765,13 @@ func (rf * Raft) ConverToCandidate() {
 	rf.votedFor = rf.me
 	rf.voteCount= 1
 
-	DPrintf("Candidate %d run for election! Its current term is %d\n", rf.me, rf.currentTerm)
+	// DPrintf("Candidate %d run for election! Its current term is %d\n", rf.me, rf.currentTerm)
 }
 
 /*节点的状态转化为Leader*/
 func (rf * Raft) ConverToLeader() {
 
-	DPrintf("Candidate %d was successfully elected as the leader! Its current term is %d\n", rf.me, rf.currentTerm)
+	// DPrintf("Candidate %d was successfully elected as the leader! Its current term is %d\n", rf.me, rf.currentTerm)
 	rf.serverState = Leader
 
 	// Leader状态下，重置nextindex与matchindex数组，并将它们初始化为当前节点的日志长度。
