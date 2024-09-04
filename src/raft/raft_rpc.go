@@ -11,7 +11,7 @@ type LogEntries struct {
 // RequestVote RPC 请求参数结构体
 type RequestVoteArgs struct {
 	Term         int // 候选人的当前任期
-	CandidateId  int // 请求投票的候选人id
+	CandidateId  int // 请求投票的候选人 id
 	LastLogIndex int // 候选人最后一个日志条目的索引
 	LastLogTerm  int // 候选人最后一个日志条目任期
 }
