@@ -37,7 +37,7 @@ func (a ByKey) Less(i, j int) bool { return a[i].Key < a[j].Key }
 func Worker(mapf func(string, string) []KeyValue,
 	reducef func(string, []string) string) {
 	// uncomment to send the Example RPC to the coordinator.
-	// 启动worker进行轮盘查询
+	// 启动 worker 进行轮盘查询
 	for {
 		task := CallGetTask()
 		switch task.Tasktype {
@@ -83,8 +83,8 @@ func DoMapTask(task *TaskResponse, mapf func(string, string) []KeyValue) {
 	kva := mapf(task.Filename, string(content))
 	intermediates = append(intermediates, kva...)
 
-	//缓存后的结果会写到本地磁盘，并切成R份
-	//切分方式是根据key做hash
+	//缓存后的结果会写到本地磁盘，并切成 R 份
+	//切分方式是根据 key 做 hash
 	buffer := make([][]KeyValue, task.NReduce)
 	for _, intermediate := range intermediates {
 		slot := ihash(intermediate.Key) % task.NReduce
@@ -96,8 +96,8 @@ func DoMapTask(task *TaskResponse, mapf func(string, string) []KeyValue) {
 		filepath := WriteTempFile(task.TaskId, index, &buffer[index])
 		out_map_file_path = append(out_map_file_path, filepath)
 	}
-	// worker回传中间文件的位置信息
-	// send the RPC request. 更新每个worker在map阶段的任务状态
+	// worker 回传中间文件的位置信息
+	// send the RPC request. 更新每个 worker 在 map 阶段的任务状态
 	args := TaskResquest {
 		TaskId: task.TaskId,
 		TaskState: Finshed,
@@ -135,7 +135,7 @@ func DoReduceTask(task *TaskResponse, reducef func(string, []string) string) {
 		}
 		
 		output := reducef(intermediates[index].Key, values)
-		//写到对应的output文件
+		//写到对应的 output 文件
 		fmt.Fprintf(outFile, "%v %v\n", intermediates[index].Key, output)
 		index = index_j
 	}
@@ -143,8 +143,8 @@ func DoReduceTask(task *TaskResponse, reducef func(string, []string) string) {
 	outputName := fmt.Sprintf("mr-out-%d", task.TaskId)
 	os.Rename(outFile.Name(), outputName)
 
-	// worker回传Reduce 阶段的任务状态
-	// send the RPC request. 更新每个worker在Reduce阶段的任务状态
+	// worker 回传 Reduce 阶段的任务状态
+	// send the RPC request. 更新每个 worker 在 Reduce 阶段的任务状态
 	args := TaskResquest {
 		TaskId: task.TaskId,
 		TaskState: Finshed,
