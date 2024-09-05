@@ -99,34 +99,32 @@ func (rf *Raft) persist() {
 	e.Encode(rf.votedFor)
 	e.Encode(rf.logs)
 
-	// // 序列化完成后，从缓冲区获取字节切片准备存储
+	// 序列化完成后，从缓冲区获取字节切片准备存储 
 	data := w.Bytes()
 	rf.persister.SaveRaftState(data)
 }
 
 // restore previously persisted state.
 func (rf *Raft) readPersist(data []byte) {
-	// rf.mu.Lock()
-	// defer rf.mu.Unlock()
 
 	if data == nil || len(data) < 1 { // bootstrap without any state?
 		return
 	}
 
-	// r := bytes.NewBuffer(data)
-	// d := labgob.NewDecoder(r)
+	r := bytes.NewBuffer(data)
+	d := labgob.NewDecoder(r)
 
-	// var currentTerm int
-	// var votedFor int
-	// var logs []LogEntries
+	var currentTerm int
+	var votedFor int
+	var logs []LogEntries
 
-	// if d.Decode(&currentTerm) != nil || d.Decode(&votedFor) != nil || d.Decode(&logs) != nil {
-	// 	DPrintf("Raft server %d readPersist ERROR!\n", rf.me)
-	// } else {
-	// 	rf.currentTerm = currentTerm
-	// 	rf.votedFor    = votedFor
-	// 	rf.logs        = logs
-	// }
+	if d.Decode(&currentTerm) != nil || d.Decode(&votedFor) != nil || d.Decode(&logs) != nil {
+		DPrintf("Raft server %d readPersist ERROR!\n", rf.me)
+	} else {
+		rf.currentTerm = currentTerm
+		rf.votedFor    = votedFor
+		rf.logs        = logs
+	}
 }
 
 // A service wants to switch to snapshot.  Only do so if Raft hasn't
@@ -190,6 +188,7 @@ func (rf *Raft) RequestVote(args *RequestVoteArgs, reply *RequestVoteReply) {
 		(rf.votedFor == noVoted || rf.votedFor == args.CandidateId) {
 		rf.votedFor       = args.CandidateId   // 更新投票给的候选人 ID。
 		reply.VoteGranted = true
+		rf.persist()
 		
 		rf.timer.Stop()
 		rf.timer.Reset(time.Duration(getRandTime(300, 500)) * time.Millisecond)
@@ -412,6 +411,7 @@ func (rf * Raft) AppendEntriesHandler(args *AppendEntriesArgs, reply *AppendEntr
 			newLog := rf.logs[:currentIdx]
 			newLog  = append(newLog, args.Entries[index:]...)
 			rf.logs = newLog
+			rf.persist()
 			// 替换或追加完毕后，跳出循环
 			break
 		}
@@ -656,6 +656,8 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 	index   = addLog.Index
 	term    = addLog.Term
 
+	rf.persist()
+
 	// DPrintf("[Start]Client sends a new commad to Leader %d!\n", rf.me)
 	// 客户端发来新的 command，复制日志到各 server，调用 sendAllRaftAppendEntries()
 	// 如果追加失败（网络问题或日志不一致被拒绝），则重复发送由携带日志条目的周期性的心跳包来完成
@@ -733,6 +735,7 @@ func (rf * Raft) ConverToFollower(term int) {
 	rf.serverState = Follower
 	rf.currentTerm = term
 	rf.votedFor    = noVoted  // 当 term 发生变化时，需要重置 votedFor
+	rf.persist()
 }
 
 /*节点的状态转化为 Candidate, 该函数在转换过程中会更新节点的状态，包括角色、任期、投票信息和获得投票个数。
@@ -747,6 +750,7 @@ func (rf * Raft) ConverToCandidate() {
 	rf.currentTerm++
 	rf.votedFor = rf.me
 
+	rf.persist()
 	// DPrintf("Candidate %d run for election! Its current term is %d\n", rf.me, rf.currentTerm)
 }
 
@@ -822,6 +826,7 @@ func Make(peers []*labrpc.ClientEnd, me int,
 
 	// 从崩溃前保存的状态进行初始化
 	rf.readPersist(persister.ReadRaftState())
+	rf.persist()
 
 	// 起一个 goroutine 循环处理超时
 	go rf.CheckTimeout()
