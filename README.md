@@ -15,7 +15,7 @@ Mit6.824  distributed system
     [Raft 2B 日志复制](https://zhuanlan.zhihu.com/p/717806584 "（可选）添加一个标题")
 - Raft lab 2C 持久化机制
 
-    [Raft 2C 持久化机制](https://zhuanlan.zhihu.com/p/714233452 "（可选）添加一个标题")
+    [Raft 2C 持久化机制](https://zhuanlan.zhihu.com/p/718472820 "（可选）添加一个标题")
 - Raft lab 2D 日志压缩
 
     [Raft 2D 日志压缩](https://zhuanlan.zhihu.com/p/714233452 "（可选）添加一个标题")
