@@ -39,3 +39,20 @@ type AppendEntriesReply struct {
 	ConflictTerm  int  // 在跟随者日志中与领导者发送的日志条目发生冲突的那条日志的任期号
 	ConflictIndex int  // 在跟随者日志中发生冲突的具体条目的索引。索引是日志条目在日志文件中的索引
 }
+
+
+// InstallSnapshotArgs 定义了在 Raft 协议中安装快照所需参数的结构。
+type InstallSnapshotArgs struct {
+	Term              int    // 是发送快照的 leader 的任期。
+	LeaderId          int    // 是 leader 的标识符，便于 follower 将 client 重定向到 leader。
+	LastIncludedIndex int    // 快照替换的最后一个条目的 index。这个索引及其之前的所有日志条目都将被快照替换。
+	LastIncludedTerm  int    // LastIncludedIndex 所属的任期。它确保快照包含最新的信息。
+	SnapshotData      []byte // Data 是表示快照数据的原始字节切片。快照以分块的方式发送，从指定的偏移量开始。
+}
+
+// InstallSnapshotReply 定义了跟随者对快照安装请求的响应结构。
+type InstallSnapshotReply struct {
+	Term   int  // RPC 接收 server 的 current term，leader 更新自己用
+	Accept bool // follower 是否接受这个快照
+}
+

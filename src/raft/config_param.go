@@ -5,7 +5,7 @@ import "math/rand"
 const noVoted = -1  // noVoted 表示没有投票，常量值为 -1
 
 // commitInterval rf 节点提交日志的间隔时间
-var commitInterval = 200 * time.Millisecond
+var commitInterval = 10 * time.Millisecond
 
 // heartBeatInterval 心跳间隔 每 1 秒发送 10 次 领导者发送心跳 RPC 的频率不超过每秒 10 次
 var heartBeatInterval = 100 * time.Millisecond
