@@ -1,44 +1,7 @@
 #!/bin/bash
-#
-# Script for running `go test` a bunch of times, in parallel, storing the test
-# output as you go, and showing a nice status output telling you how you're
-# doing.
-#
-# Normally, you should be able to execute this script with
-#
-#   ./go-test-many.sh
-#
-# and it should do The Right Thing(tm) by default. However, it does take some
-# arguments so that you can tweak it for your testing setup. To understand
-# them, we should first go quickly through what exactly this script does.
-#
-# First, it compiles your Go program (using go test -c) to ensure that all the
-# tests are run on the same codebase, and to speed up the testing. Then, it
-# runs the tester some number of times. It will run some number of testers in
-# parallel, and when that number of running testers has been reached, it will
-# wait for the oldest one it spawned to finish before spawning another. The
-# output from each test i is stored in test-$i.log and test-$i.err (STDOUT and
-# STDERR respectively).
-#
-# The options you can specify on the command line are:
-#
-#   1) how many times to run the tester (defaults to 100)
-#   2) how many testers to run in parallel (defaults to the number of CPUs)
-#   3) which subset of the tests to run (default to all tests)
-#
-# 3) is simply a regex that is passed to the tester under -test.run; any tests
-# matching the regex will be run.
-#
-# The script is smart enough to clean up after itself if you kill it
-# (in-progress tests are killed, their output is discarded, and no failure
-# message is printed), and will automatically continue from where it left off
-# if you kill it and then start it again.
-#
-# By now, you know everything that happens below.
-# If you still want to read the code, go ahead.
 
-rm -rf allmodule
-mkdir allmodule
+rm -rf single_module
+mkdir single_module
 
 if [ $# -eq 1 ] && [ "$1" = "--help" ]; then
 	echo "Usage: $0 [RUNS=100] [PARALLELISM=#cpus] [TESTPATTERN='']"
@@ -47,7 +10,7 @@ fi
 
 # If the tests don't even build, don't bother. Also, this gives us a static
 # tester binary for higher performance and higher reproducability.
-if ! go test -c -o tester; then
+if ! go test -v -c -o tester; then
 	echo -e "\e[1;31mERROR: Build failed\e[0m"
 	exit 1
 fi
@@ -70,13 +33,11 @@ if [ $# -gt 2 ]; then
 	test="$3"
 fi
 
-# Figure out where we left off
+
 logs=$(find . -maxdepth 1 -name 'test-*.log' -type f -printf '.' | wc -c)
 success=$(grep -E '^PASS$' test-*.log | wc -l)
 ((failed = logs - success))
 
-# Finish checks the exit status of the tester with the given PID, updates the
-# success/failed counters appropriately, and prints a pretty message.
 finish() {
 	if ! wait "$1"; then
 		if command -v notify-send >/dev/null 2>&1 &&((failed == 0)); then
@@ -134,10 +95,10 @@ for i in $(seq "$((success+failed+1))" "$runs"); do
 
 	# Run the tester, passing -test.run if necessary
 	if [[ -z "$test" ]]; then
-		./tester -test.v 2> "./allmodule/test-${i}.err" > "./allmodule/test-${i}.log" &
+		./tester -test.v 2> "./single_module/test-${i}.err" > "./single_module/test-${i}.log" &
 		pid=$!
 	else
-		./tester -test.run "$test" -test.v 2> "./allmodule/test-${i}.err" > "./allmodule/test-${i}.log" &
+		./tester -test.run "$test" -test.v 2> "./single_module/test-${i}.err" > "./single_module/test-${i}.log" &
 		pid=$!
 	fi
 
@@ -154,3 +115,17 @@ if ((failed>0)); then
 	exit 1
 fi
 exit 0
+
+# rm -rf res
+# mkdir res
+
+# for ((i = 0; i < 100; i++))
+# do
+#     # replace job name here
+#     (go test -v -run TestSnapshotBasic2D -race) &> ./res/$i &
+
+#     sleep 5
+
+#     grep -nr "FAIL.*raft.*" res
+
+# done

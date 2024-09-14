@@ -34,6 +34,11 @@ func max(a, b int) int {
 	}
 }
 
+// getFirstLog 获取第一个日志
+func (rf *Raft) getFirstLog() LogEntries {
+	return rf.logs[0]
+}
+
 // 获取 l~r 毫秒范围内一个随机毫秒数
 func getRandTime(l int, r int) int {
 	// 如果每次调 rand.Intn() 前都调了 rand.Seed(x)，每次的 x 相同的话，每次的 rand.Intn() 也是一样的（伪随机）
