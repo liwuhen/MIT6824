@@ -140,14 +140,6 @@ func (rf *Raft) readPersist(data []byte) {
 	}
 }
 
-func (rf *Raft) LastLog() (int, int) {
-	if len(rf.logs) <= 1 {
-		return rf.lastIncludedIndex, rf.lastIncludedTerm
-	} else {
-		return rf.logs[len(rf.logs)-1].Index, rf.logs[len(rf.logs)-1].Term
-	}
-}
-
 // Snapshot 接收服务层的通知，表明已经创建了一个包含截至 index 的所有信息的快照。
 // 这意味着服务层不再需要通过（包括）该 index 的日志。Raft 应尽可能地修剪其日志。
 // 参数：
@@ -157,8 +149,7 @@ func (rf *Raft) Snapshot(index int, snapshot []byte) {
 
 	// 获取第一个日志条目的索引
 	rf.mu.Lock()
-	lastIndex, _ := rf.LastLog()
-	if index <= rf.lastIncludedIndex || index > rf.lastApplied || index > lastIndex {
+	if index <= rf.lastIncludedIndex || index > rf.logs[len(rf.logs)-1].Index {
 		// 如果主动快照的 index 不大于 rf 之前的 lastIncludedIndex（这次快照其实是重复或更旧的），则不应用该快照
 		// DPrintf("Server %d refuse this positive snapshot(index=%v, rf.lastIncludedIndex=%v).\n", rf.me, index, rf.lastIncludedIndex)
 		rf.mu.Unlock()
@@ -168,14 +159,14 @@ func (rf *Raft) Snapshot(index int, snapshot []byte) {
 	// 日志裁剪，将 index 及以前的日志条目剪掉，主动快照时 lastApplied、commitIndex 一定在 snapshotIndex 之后，因此不用更新
 	// DPrintf("=====> begin snapshot lastIncludedIndex: %d lastIncludedTerm: %d. index: %d\n  loglen: %d",rf.lastIncludedIndex, rf.lastIncludedTerm, index, len(rf.logs))
 	// DPrintf("Server %d start to positively snapshot(rf.lastIncluded=%v, snapshotIndex=%v).\n", rf.me, rf.lastIncludedIndex, index)
-	var newLog = []LogEntries{{Term: rf.logs[index-rf.lastIncludedIndex].Term, Index: index}} // 裁剪后依然 log 索引 0 处用一个占位 entry，不实际使用
-	newLog  = append(newLog, rf.logs[index-rf.lastIncludedIndex+1:]...)                      // 这样可以避免原 log 底层数组由于有部分在被引用而无法将剪掉的部分 GC（真正释放）
+	var newLog = []LogEntries{{Term: rf.logs[index-rf.lastIncludedIndex].Term, Index: index}} 
+	newLog  = append(newLog, rf.logs[index-rf.lastIncludedIndex+1:]...)
 	rf.logs = newLog
 	rf.lastIncludedIndex = newLog[0].Index
 	rf.lastIncludedTerm  = newLog[0].Term
 
-	// 通过 persister 进行持久化存储
-	rf.persist() // 先持久化 raft state（因为 rf.log，rf.lastIncludedIndex，rf.lastIncludedTerm 改变了）
+
+	rf.persist() 
 	state := rf.persister.ReadRaftState()
 	rf.persister.SaveStateAndSnapshot(state, snapshot)
 	rf.mu.Unlock()
@@ -865,7 +856,6 @@ func (rf *Raft) Start(command interface{}) (int, int, bool) {
 	rf.nextIndex[rf.me]  = addLog.Index + 1
 
 	// DPrintf("[Start]Client sends a new commad to Leader %d!\n", rf.me)
-	go rf.sendAllRaftAppendEntries()
 
 	return index, term, isLeader
 }

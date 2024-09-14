@@ -8,7 +8,7 @@ const noVoted = -1  // noVoted 表示没有投票，常量值为 -1
 var commitInterval = 10 * time.Millisecond
 
 // heartBeatInterval 心跳间隔 每 1 秒发送 10 次 领导者发送心跳 RPC 的频率不超过每秒 10 次
-var heartBeatInterval = 100 * time.Millisecond
+var heartBeatInterval = 50 * time.Millisecond
 
 type RoleType int // 节点的三种状态
 
